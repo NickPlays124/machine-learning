@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Document</title>
+    <style>
+      body {
+        text-align: center;
+        font-family: Arial;
+      }
+      canvas {
+        border: 2px solid black;
+        margin-top: 10px;
+        background: lightblue;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Gesture Runner Game</h1>
+    <button onclick="init()">Start Game</button>
+
+    <div id="webcam-container"></div>
+    <canvas id="gameCanvas" width="500" height="300"></canvas>
+
+    <h2 id="gestureText">Menunggu gesture..</h2>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script>
+      // More API functions here:
+      // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/pose
+
+      // the link to your model provided by Teachable Machine export panel
+      const URL = "https://teachablemachine.withgoogle.com/models/f15xFzdL3/";
+      let model, webcam;
+
+      let canvas = document.getElementById("gameCanvas");
+      let ctx = canvas.getContext("2d");
+
+      let player = {
+        x: 80,
+        y: 200,
+        width: 30,
+        height: 30,
+        velocityY: 0,
+        jumping: false,
+      };
+      let gravity = 1;
+      let groundY = 230;
+      let speed = 0;
+      let bgOffset = 0;
+
+      let ball = {
+        //tambahan ini
+        x: 500,
+        y: 100,
+        radius: 10,
+      };
+
+      async function init() {
+        console.log("START");
+
+        model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+
+        webcam = new tmImage.Webcam(200, 200, true);
+        await webcam.setup();
+        await webcam.play();
+
+        document.getElementById("webcam-container").appendChild(webcam.canvas); //<!--query selctor jika ingin mengambil class dr div-->
+
+        requestAnimationFrame(loop);
+      }
+
+      async function loop() {
+        webcam.update(); // update the webcam frame
+        await predict();
+        updateGame();
+        drawGame();
+        requestAnimationFrame(loop);
+      }
+
+      async function predict() {
+        const prediction = await model.predict(webcam.canvas);
+
+        let highest = prediction.reduce((prev, current) =>
+          prev.probability > current.probability ? prev : current,
+        );
+        controlGame(highest.className);
+        console.log(highest.className, highest.probability);
+      }
+
+      function controlGame(gesture) {
+        let text = document.getElementById("gestureText");
+
+        if (gesture === "Jempol") {
+          text.innerText = " Jempol = LOMPAT";
+
+          if (!player.jumping) {
+            player.velocityY = -15;
+            player.jumping = true;
+          }
+        } else if (gesture === "Tangan Terbuka") {
+          text.innerText = " Tangan = JALAN";
+          speed = 4;
+        } else if (gesture === "Peace") {
+          text.innerText = "Peace = DIAM";
+          speed = 0;
+        } else {
+          text.innerText = "Tidak dikenali";
+          speed = 0;
+        }
+      }
+
+      function updateGame() {
+        player.y += player.velocityY;
+        player.velocityY += gravity;
+
+        if (player.y >= groundY) {
+          player.y = groundY;
+          player.velocityY = 0;
+          player.jumping = false;
+        }
+        bgOffset -= speed;
+
+        if (bgOffset < -500) bgOffset = 0;
+
+        // Bulatan ikut bergerak ke kiri
+        ball.x -= speed;
+
+        // Kalau sudah keluar canvas, muncul lagi dari kanan, tambahan ini
+        if (ball.x < -ball.radius) {
+          ball.x = canvas.width + ball.radius;
+        }
+      }
+      function drawGame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "lightblue";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "brown";
+        ctx.fillRect(bgOffset, groundY + 30, 1000, 50);
+
+        ctx.fillStyle = "blue";
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+
+        //tambahan ini
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    </script>
+  </body>
+</html>

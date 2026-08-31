@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <h2>Webcam Capture</h2>
+    <video id="vidio" width="300" height="200" autoplay></video>
+    <br />
+    <br />
+    <button onclick="ambilGambar()">Capture</button>
+    <button onclick="simpanGambar()">Simpan</button>
+    <br /><br />
+    <canvas id="canvas" width="300" height="200"></canvas>
+
+    <script>
+      const video = document.getElementById("vidio");
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then(function (stream) {
+          vidio.srcObject = stream;
+        })
+        .catch(function (error) {
+          alert("Kamera tidak bisa di akses");
+        });
+
+      function ambilGambar() {
+        context.drawImage(vidio, 0, 0, 300, 200);
+      }
+
+      function simpanGambar() {
+        const link = document.createElement("a");
+        link.download = "gambar.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      }
+    </script>
+  </body>
+</html>
